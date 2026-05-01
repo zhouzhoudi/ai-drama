@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Drama Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.05em;
+      color: #c9a84c;
+      margin-bottom: 0.25rem;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #888;
+      font-style: italic;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    form {
+      background: #16213e;
+      border: 1px solid #c9a84c44;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    label { font-size: 0.9rem; color: #c9a84c; letter-spacing: 0.04em; }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      background: #0f3460;
+      border: 1px solid #c9a84c55;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 1rem;
+      margin-top: 0.3rem;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    button[type="submit"] {
+      padding: 0.75rem 1.5rem;
+      background: #c9a84c;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: background 0.2s;
+    }
+    button[type="submit"]:hover { background: #e0c060; }
+
+    .error {
+      background: #5c1a1a;
+      border: 1px solid #c0392b;
+      color: #f1948a;
+      padding: 1rem;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 640px;
+      margin-top: 1.5rem;
+    }
+
+    .drama {
+      width: 100%;
+      max-width: 760px;
+      margin-top: 2rem;
+    }
+
+    .drama-title {
+      font-size: 2rem;
+      color: #c9a84c;
+      text-align: center;
+      margin-bottom: 0.25rem;
+    }
+
+    .drama-genre {
+      text-align: center;
+      color: #888;
+      font-style: italic;
+      margin-bottom: 0.75rem;
+    }
+
+    .drama-characters {
+      text-align: center;
+      color: #aaa;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+
+    .scene {
+      background: #16213e;
+      border-left: 3px solid #c9a84c;
+      border-radius: 0 8px 8px 0;
+      padding: 1.2rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .scene-title {
+      font-size: 1.1rem;
+      color: #c9a84c;
+      margin-bottom: 0.75rem;
+      font-weight: bold;
+    }
+
+    .scene-dialogue {
+      white-space: pre-wrap;
+      line-height: 1.75;
+      color: #d0d0d0;
+    }
+
+    .loading {
+      display: none;
+      color: #c9a84c;
+      font-style: italic;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎭 AI Drama Generator</h1>
+  <p class="subtitle">Powered by GPT — crafting theatrical masterpieces since 2024</p>
+
+  <form id="dramaForm" method="POST" action="/generate">
+    <div>
+      <label for="premise">Premise / Central Conflict</label>
+      <textarea id="premise" name="premise" required
+        placeholder="e.g. A disgraced king returns to reclaim his throne, only to discover his heir has already made peace with the usurpers.">{{ form.premise }}</textarea>
+    </div>
+
+    <div>
+      <label for="characters">Characters (comma-separated)</label>
+      <input type="text" id="characters" name="characters"
+        placeholder="e.g. King Aldric, Queen Mirela, Prince Dorian"
+        value="{{ form.characters }}" />
+    </div>
+
+    <div>
+      <label for="genre">Genre</label>
+      <select id="genre" name="genre">
+        {% set genres = ['tragedy', 'comedy', 'thriller', 'romance', 'historical drama', 'dark comedy', 'melodrama'] %}
+        {% for g in genres %}
+          <option value="{{ g }}" {% if form.genre == g %}selected{% endif %}>{{ g|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label for="num_scenes">Number of Scenes</label>
+      <input type="number" id="num_scenes" name="num_scenes" min="1" max="6"
+        value="{{ form.num_scenes or 3 }}" />
+    </div>
+
+    <button type="submit" id="submitBtn">✍️ Generate Drama</button>
+    <p class="loading" id="loadingMsg">Curtain rising… crafting your drama…</p>
+  </form>
+
+  {% if error %}
+  <div class="error">⚠️ {{ error }}</div>
+  {% endif %}
+
+  {% if drama %}
+  <div class="drama">
+    <h2 class="drama-title">{{ drama.title }}</h2>
+    <p class="drama-genre">{{ drama.genre|capitalize }}</p>
+    <p class="drama-characters">Characters: {{ drama.characters | join(', ') }}</p>
+
+    {% for scene in drama.scenes %}
+    <div class="scene">
+      <div class="scene-title">{{ scene.title }}</div>
+      <div class="scene-dialogue">{{ scene.dialogue }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <script>
+    document.getElementById('dramaForm').addEventListener('submit', function () {
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('loadingMsg').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
