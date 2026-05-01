@@ -1,0 +1,340 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Drama Workflow Rules",
+  "description": "OpenClaw 可导入的 AI 短剧自动生成工作流规则",
+  "version": "1.0.0",
+  "triggers": [
+    {
+      "id": "feishu_drama_request",
+      "name": "飞书短剧请求",
+      "type": "feishu_message",
+      "pattern": "^(/短剧|制作短剧|生成短剧)"
+    },
+    {
+      "id": "cron_daily",
+      "name": "每日自动生成",
+      "type": "schedule",
+      "cron": "0 9 * * *"
+    },
+    {
+      "id": "webhook_create",
+      "name": "前端创建",
+      "type": "http_webhook",
+      "path": "/api/scripts"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "wf_drama_full_pipeline",
+      "name": "AI 短剧全流程",
+      "description": "从需求到最终成片的完整自动化流程",
+      "trigger": "feishu_drama_request",
+      "steps": [
+        {
+          "step": 1,
+          "name": "解析需求",
+          "action": "parse_requirements",
+          "input": "{{trigger.message}}",
+          "output": "requirements"
+        },
+        {
+          "step": 2,
+          "name": "生成剧本",
+          "action": "ai_generate_script",
+          "input": {
+            "title": "{{requirements.title}}",
+            "theme": "{{requirements.theme}}",
+            "style": "{{requirements.style}}",
+            "duration": "{{requirements.duration}}",
+            "description": "{{requirements.description}}",
+            "characters": "{{requirements.characters}}"
+          },
+          "output": "script",
+          "tool": "script_generator"
+        },
+        {
+          "step": 3,
+          "name": "保存剧本",
+          "action": "save_script",
+          "input": "{{script}}",
+          "output": "script_id",
+          "tool": "file_storage"
+        },
+        {
+          "step": 4,
+          "name": "生成角色图",
+          "action": "generate_character_images",
+          "input": {
+            "script_id": "{{script_id}}",
+            "characters": "{{script.characters}}"
+          },
+          "output": "character_images",
+          "tool": "minimax_image",
+          "parallel": true
+        },
+        {
+          "step": 5,
+          "name": "注册可灵主体",
+          "action": "register_kling_elements",
+          "input": {
+            "script_id": "{{script_id}}",
+            "characters": "{{script.characters}}"
+          },
+          "output": "kling_elements",
+          "tool": "kling_api",
+          "parallel": true
+        },
+        {
+          "step": 6,
+          "name": "生成分镜视频",
+          "action": "generate_shot_videos",
+          "input": {
+            "script_id": "{{script_id}}",
+            "shots": "{{script.scenes[*].shots}}"
+          },
+          "output": "shot_videos",
+          "tool": "kling_video",
+          "parallel": true,
+          "retry": {
+            "max_attempts": 3,
+            "delay": 30
+          }
+        },
+        {
+          "step": 7,
+          "name": "生成配音",
+          "action": "generate_audio",
+          "input": {
+            "script_id": "{{script_id}}",
+            "dialogues": "{{script.scenes[*].shots[*].dialogue}}"
+          },
+          "output": "audio_files",
+          "tool": "minimax_tts",
+          "parallel": true
+        },
+        {
+          "step": 8,
+          "name": "音视频合并",
+          "action": "merge_media",
+          "input": {
+            "script_id": "{{script_id}}",
+            "videos": "{{shot_videos}}",
+            "audio": "{{audio_files}}"
+          },
+          "output": "final_video",
+          "tool": "ffmpeg"
+        },
+        {
+          "step": 9,
+          "name": "通知完成",
+          "action": "notify_completion",
+          "input": {
+            "script_id": "{{script_id}}",
+            "final_video": "{{final_video}}",
+            "title": "{{script.title}}"
+          },
+          "output": "notification_sent",
+          "tool": "feishu_message"
+        }
+      ],
+      "error_handling": {
+        "on_failure": "retry_or_skip",
+        "notify_on_error": true,
+        "save_checkpoint": true
+      }
+    },
+    {
+      "id": "wf_script_only",
+      "name": "仅生成剧本",
+      "description": "只生成剧本和分镜，不生成视频",
+      "trigger": "feishu_message_pattern",
+      "pattern": "^/剧本",
+      "steps": [
+        {
+          "step": 1,
+          "name": "解析需求",
+          "action": "parse_requirements"
+        },
+        {
+          "step": 2,
+          "name": "生成剧本",
+          "action": "ai_generate_script"
+        },
+        {
+          "step": 3,
+          "name": "保存剧本",
+          "action": "save_script"
+        }
+      ]
+    },
+    {
+      "id": "wf_characters_only",
+      "name": "仅生成角色图",
+      "description": "为现有剧本生成角色图",
+      "trigger": "http_webhook",
+      "path": "/api/scripts/{script_id}/characters/generate",
+      "steps": [
+        {
+          "step": 1,
+          "name": "获取剧本",
+          "action": "load_script",
+          "input": "{{path.script_id}}"
+        },
+        {
+          "step": 2,
+          "name": "生成角色图",
+          "action": "generate_character_images",
+          "parallel": true
+        },
+        {
+          "step": 3,
+          "name": "更新剧本",
+          "action": "update_script"
+        }
+      ]
+    },
+    {
+      "id": "wf_video_only",
+      "name": "仅生成分镜视频",
+      "description": "为现有剧本生成分镜视频（需先有角色图）",
+      "trigger": "http_webhook",
+      "path": "/api/scripts/{script_id}/shots/generate",
+      "steps": [
+        {
+          "step": 1,
+          "name": "获取剧本",
+          "action": "load_script"
+        },
+        {
+          "step": 2,
+          "name": "验证前置条件",
+          "action": "validate_characters",
+          "fail_on_error": true
+        },
+        {
+          "step": 3,
+          "name": "批量生成分镜",
+          "action": "batch_generate_shots",
+          "parallel": true,
+          "batch_size": 3
+        },
+        {
+          "step": 4,
+          "name": "合并视频",
+          "action": "merge_videos"
+        }
+      ]
+    },
+    {
+      "id": "wf_daily_auto",
+      "name": "每日自动短剧",
+      "description": "每天自动生成一个短剧并发布到小红书",
+      "trigger": "schedule",
+      "cron": "0 9 * * *",
+      "steps": [
+        {
+          "step": 1,
+          "name": "随机选题",
+          "action": "random_theme_selection",
+          "input": {
+            "themes": ["都市爱情", "古风仙侠", "悬疑推理", "科幻未来"],
+            "styles": ["甜蜜治愈", "搞笑幽默", "紧张刺激"]
+          }
+        },
+        {
+          "step": 2,
+          "name": "生成剧本",
+          "action": "ai_generate_script"
+        },
+        {
+          "step": 3,
+          "name": "快速生成",
+          "action": "quick_generate_all",
+          "input": {
+            "quality": "fast"
+          }
+        },
+        {
+          "step": 4,
+          "name": "发布小红书",
+          "action": "post_to_xhs",
+          "tool": "xhs_poster"
+        }
+      ]
+    }
+  ],
+  "tools": {
+    "script_generator": {
+      "type": "ai_model",
+      "provider": "hermes",
+      "model": "auto",
+      "system_prompt": "你是专业的AI短剧剧本作家，擅长创作吸引人的短视频剧本。"
+    },
+    "minimax_image": {
+      "type": "api",
+      "endpoint": "https://api.minimaxi.com/v1/image_generation",
+      "model": "image-01",
+      "params": {
+        "aspect_ratio": "3:4"
+      }
+    },
+    "minimax_tts": {
+      "type": "api",
+      "endpoint": "https://api.minimaxi.com/v1/t2a_v2",
+      "model": "speech-2.8-hd",
+      "default_voice": "female-tianmei"
+    },
+    "kling_video": {
+      "type": "api",
+      "endpoint": "https://api.klingai.com/v1/videos/image2video",
+      "model": "c强劲",
+      "params": {
+        "aspect_ratio": "9:16",
+        "duration": 5
+      }
+    },
+    "ffmpeg": {
+      "type": "local",
+      "command": "ffmpeg",
+      "preset": "fast"
+    },
+    "file_storage": {
+      "type": "filesystem",
+      "base_path": "/Users/zhoumi/ai-drama-system/data/scripts"
+    },
+    "xhs_poster": {
+      "type": "script",
+      "path": "/Users/zhoumi/xhs_batch_poster.py"
+    },
+    "feishu_message": {
+      "type": "messenger",
+      "platform": "feishu",
+      "template": "card"
+    }
+  },
+  "variables": {
+    "SYSTEM_BASE_DIR": "/Users/zhoumi/ai-drama-system",
+    "DEFAULT_DURATION": 180,
+    "MAX_SHOTS_PARALLEL": 3,
+    "KLING_RETRY_DELAY": 30,
+    "NOTIFY_ON_COMPLETE": true
+  },
+  "notifications": {
+    "on_start": {
+      "platform": "feishu",
+      "message": "🎬 短剧生成已开始\n\n标题: {{title}}\n题材: {{theme}}\n状态: 生成中..."
+    },
+    "on_progress": {
+      "platform": "feishu",
+      "message": "📊 进度更新\n\n当前: {{current_step}}\n进度: {{progress}}%"
+    },
+    "on_complete": {
+      "platform": "feishu",
+      "message": "✅ 短剧生成完成!\n\n标题: {{title}}\n视频: {{video_url}}\n\n点击观看"
+    },
+    "on_error": {
+      "platform": "feishu",
+      "message": "❌ 生成失败\n\n错误: {{error}}\n剧本ID: {{script_id}}"
+    }
+  }
+}

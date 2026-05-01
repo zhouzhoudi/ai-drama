@@ -1,0 +1,36 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+*.log
+
+# Python venv
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+.vite/
+
+# Local data / outputs (generated)
+data/
+backend/data/
+frontend/.cache/
+
+# Env files / secrets
+.env
+backend/.env
+frontend/.env
+**/*.env
+
+# Archives
+*.tar.gz
+*.zip

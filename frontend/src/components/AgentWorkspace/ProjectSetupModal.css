@@ -1,0 +1,216 @@
+.project-setup-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.project-setup-modal {
+  background: #0a0a0a;
+  border: 1px solid #27272a;
+  border-radius: 20px;
+  padding: 40px 40px 20px 40px;
+  width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.project-setup-modal h2 {
+  margin: 0 0 10px 0;
+  color: #ffffff;
+  font-size: 24px;
+}
+
+.project-setup-modal p {
+  color: #a1a1aa;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scroll-content {
+  overflow-y: auto;
+  padding-right: 10px;
+  margin-right: -10px;
+}
+
+/* Custom scrollbar for webkit */
+.scroll-content::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-content::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+.scroll-content::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+.form-group {
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  display: block;
+  color: #a1a1aa;
+  margin-bottom: 15px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.option-card {
+  background: transparent;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 15px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.option-card:hover {
+  background: rgba(254, 240, 138, 0.05);
+  border-color: rgba(254, 240, 138, 0.3);
+}
+
+.option-card.selected {
+  background: rgba(254, 240, 138, 0.1);
+  border-color: #fef08a;
+  box-shadow: 0 0 15px rgba(254, 240, 138, 0.1);
+}
+
+.ratio-box {
+  border: 2px solid #a1a1aa;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.option-card.selected .ratio-box {
+  border-color: #fef08a;
+}
+
+.ratio-box.vertical { width: 18px; height: 32px; }
+.ratio-box.horizontal { width: 32px; height: 18px; margin-top: 7px; margin-bottom: 7px;}
+.ratio-box.standard { width: 24px; height: 32px; }
+.ratio-box.cinematic { width: 42px; height: 18px; margin-top: 7px; margin-bottom: 7px;}
+
+.option-card span {
+  font-size: 11px;
+  color: #ffffff;
+}
+
+select {
+  width: 100%;
+  padding: 12px 15px;
+  background: transparent;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+select:focus {
+  border-color: #fef08a;
+}
+
+.modal-footer {
+  padding-top: 20px;
+  margin-top: 10px;
+  border-top: 1px solid #27272a;
+}
+
+.start-btn {
+  width: 100%;
+  padding: 14px;
+  background: #fef08a;
+  color: #000;
+  border: none;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.start-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(254, 240, 138, 0.3);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.engine-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.engine-card {
+  background: transparent;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.engine-card:hover {
+  background: rgba(254, 240, 138, 0.05);
+  border-color: rgba(254, 240, 138, 0.3);
+}
+
+.engine-card.selected {
+  background: rgba(254, 240, 138, 0.1);
+  border-color: #fef08a;
+  box-shadow: 0 0 10px rgba(254, 240, 138, 0.1);
+}
+
+.engine-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.engine-name {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.engine-desc {
+  color: #a1a1aa;
+  font-size: 11px;
+}
