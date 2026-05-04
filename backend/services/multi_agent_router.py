@@ -85,6 +85,8 @@ class AgentRouter(LegacyAgentRouter):
     LEGACY_TO_PIPELINE = {
         "GENERATE_STORYBOARD": "GENERATE_STORYBOARD_IMAGES",
         "GENERATE_SHOT_VIDEOS": "GENERATE_STORYBOARD_VIDEOS",
+        # 当前没有独立 TTS 能力。配音/声音需求统一交给 Kling OmniVideo sound=on。
+        "GENERATE_AUDIO": "GENERATE_STORYBOARD_VIDEOS",
     }
 
     def __init__(self):
@@ -135,6 +137,10 @@ class AgentRouter(LegacyAgentRouter):
             params.setdefault("image_model", "kling-v3-omni")
         if action == "GENERATE_STORYBOARD_VIDEOS":
             params.setdefault("video_model", "kling-v3-omni")
+            params["sound"] = "on"
+            params["sound_on"] = True
+            if legacy_action == "GENERATE_AUDIO":
+                params["audio_strategy"] = "kling_omni_video_sound_on"
 
         ui_patch = decision.get("ui_patch") if isinstance(decision.get("ui_patch"), dict) else {}
         ui_patch = dict(ui_patch)
@@ -245,7 +251,7 @@ class AgentRouter(LegacyAgentRouter):
                     script_id,
                     params.get("shot_ids"),
                 )
-                return "queued", "分镜生视频任务已加入后台队列。"
+                return "queued", "分镜生视频任务已加入后台队列，Kling OmniVideo 会使用 sound=on。"
             if action in self.LEGACY_ACTIONS:
                 self._run_background_action(background_tasks, action, script_id, params)
                 return "queued", "后台任务已加入队列。"
@@ -280,7 +286,7 @@ class AgentRouter(LegacyAgentRouter):
             queue_status, detail = self._queue_pipeline_background_action(background_tasks, action, script_id, params)
             return script_id, {"status": queue_status, "script_id": script_id, "detail": detail}
 
-        if action in self.LEGACY_ACTIONS and action not in {"CREATE_SCRIPT", "REWRITE_SCRIPT", "CHAT", "QUERY_STATUS"}:
+        if action in self.LEGACY_ACTIONS and action not in {"CREATE_SCRIPT", "REWRITE_SCRIPT", "GENERATE_AUDIO", "CHAT", "QUERY_STATUS"}:
             queue_status, detail = self._queue_pipeline_background_action(background_tasks, action, script_id, params)
             return script_id, {"status": queue_status, "script_id": script_id, "detail": detail}
 
@@ -420,7 +426,6 @@ class AgentRouter(LegacyAgentRouter):
             "REVIEW_SHOTS": "分镜审阅agent 正在复核分镜",
             "GENERATE_STORYBOARD_IMAGES": "分镜生图agent 正在加入生图队列",
             "GENERATE_STORYBOARD_VIDEOS": "分镜生视频agent 正在加入视频队列",
-            "GENERATE_AUDIO": "配音任务正在加入后台队列",
             "MERGE_FINAL": "最终成片任务正在加入后台队列",
             "QUERY_STATUS": "正在查询项目状态",
         }.get(action, "正在处理")
@@ -434,8 +439,7 @@ class AgentRouter(LegacyAgentRouter):
             "WRITE_SHOT_SCRIPT": "会把剧本拆成可拍摄镜头表。",
             "REVIEW_SHOTS": "会检查镜头连续性、角色一致性和提示词可执行性。",
             "GENERATE_STORYBOARD_IMAGES": "会调用 Kling 生成每个镜头的分镜图/首帧图。",
-            "GENERATE_STORYBOARD_VIDEOS": "会调用 Kling OmniVideo 生成镜头视频片段。",
-            "GENERATE_AUDIO": "会复用旧配音后台任务。",
+            "GENERATE_STORYBOARD_VIDEOS": "会调用 Kling OmniVideo 生成带声音的视频片段，sound=on。",
             "MERGE_FINAL": "会复用旧最终合成后台任务。",
         }.get(action, "正在执行当前流程。")
 
@@ -460,7 +464,6 @@ class AgentRouter(LegacyAgentRouter):
             "WRITE_SHOT_SCRIPT": "下一步可以输入：审阅分镜。",
             "REVIEW_SHOTS": "下一步可以输入：生成分镜图。",
             "GENERATE_STORYBOARD_IMAGES": "下一步可以输入：生成分镜视频。",
-            "GENERATE_STORYBOARD_VIDEOS": "下一步可以输入：合成最终成片。",
-            "GENERATE_AUDIO": "下一步可以输入：生成分镜视频，或合成最终成片。",
+            "GENERATE_STORYBOARD_VIDEOS": "已使用 sound=on 生成带声音视频；下一步可以输入：合成最终成片。",
             "MERGE_FINAL": "最终合成已进入队列，可以查看任务状态。",
         }.get(action, "可以继续告诉我下一步要做什么。")
