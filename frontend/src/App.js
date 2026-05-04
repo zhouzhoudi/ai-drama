@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
-import AgentWorkspace from './components/AgentWorkspace';
+import PremiumAgentWorkspace from './components/PremiumAgentWorkspace';
 
 const API_BASE = '';
 
@@ -104,84 +104,43 @@ function NewProjectModal({ onClose, onCreated }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box modal-box-wide" onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div className="modal-header">
           <h2 className="modal-title">配置项目基本设置</h2>
           <span className="modal-hint">⚡ 预计生成速度：快</span>
         </div>
-
-        {/* 项目名称 */}
         <div className="modal-field">
           <label className="modal-label">项目名称</label>
-          <input
-            className="modal-input"
-            type="text"
-            placeholder="给你的短剧起个名字..."
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            autoFocus
-          />
+          <input className="modal-input" type="text" placeholder="给你的短剧起个名字..." value={title} onChange={e => setTitle(e.target.value)} autoFocus />
         </div>
-
-        {/* 一句话描述 */}
         <div className="modal-field">
           <label className="modal-label">剧情描述（一句话）</label>
-          <input
-            className="modal-input"
-            type="text"
-            placeholder="例如：霸道总裁爱上灰姑娘，误会重重最终破镜重圆..."
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-          />
+          <input className="modal-input" type="text" placeholder="例如：帮我生成一部以猫咪为主角的007电影短视频..." value={description} onChange={e => setDescription(e.target.value)} />
         </div>
-
-        {/* 生成模式 */}
         <div className="modal-field">
           <label className="modal-label">生成模式</label>
           <div className="mode-cards">
             {GEN_MODES.map(m => (
-              <div
-                key={m.id}
-                className={`mode-card ${genMode === m.id ? 'selected' : ''}`}
-                onClick={() => setGenMode(m.id)}
-              >
+              <div key={m.id} className={`mode-card ${genMode === m.id ? 'selected' : ''}`} onClick={() => setGenMode(m.id)}>
                 <span className="mode-icon">{m.icon}</span>
-                <div>
-                  <div className="mode-label">{m.label}</div>
-                  <div className="mode-sub">{m.sub}</div>
-                </div>
+                <div><div className="mode-label">{m.label}</div><div className="mode-sub">{m.sub}</div></div>
               </div>
             ))}
           </div>
         </div>
-
-        {/* 视觉风格 */}
         <div className="modal-field">
           <label className="modal-label">视觉风格</label>
           <div className="style-grid">
             {VISUAL_STYLES.map(s => (
-              <div
-                key={s.id}
-                className={`style-card ${visualStyle === s.id ? 'selected' : ''}`}
-                onClick={() => setVisualStyle(s.id)}
-              >
-                <div className="style-img-wrap">
-                  <img src={s.img} alt={s.label} className="style-img" />
-                </div>
-                <div className="style-label">{s.label}</div>
-                <div className="style-sub">{s.sub}</div>
-                {s.hot && <span className="style-hot">🔥</span>}
+              <div key={s.id} className={`style-card ${visualStyle === s.id ? 'selected' : ''}`} onClick={() => setVisualStyle(s.id)}>
+                <div className="style-img-wrap"><img src={s.img} alt={s.label} className="style-img" /></div>
+                <div className="style-label">{s.label}</div><div className="style-sub">{s.sub}</div>{s.hot && <span className="style-hot">🔥</span>}
               </div>
             ))}
           </div>
         </div>
-
-        {/* 确认 */}
         <div className="modal-actions">
           <button className="btn-cancel" onClick={onClose}>取消</button>
-          <button className="btn-create" onClick={handleSubmit} disabled={loading || !title.trim()}>
-            {loading ? '创建中...' : '✓ 开始创作'}
-          </button>
+          <button className="btn-create" onClick={handleSubmit} disabled={loading || !title.trim()}>{loading ? '创建中...' : '✓ 开始创作'}</button>
         </div>
       </div>
     </div>
@@ -225,71 +184,29 @@ function DramaList() {
         <h1 className="projects-title">我的项目</h1>
         <button className="btn-import">导入项目</button>
       </div>
-
-      {loading ? (
-        <div className="loading-state">加载中...</div>
-      ) : (
+      {loading ? <div className="loading-state">加载中...</div> : (
         <div className="projects-grid">
-          {/* New Project Card */}
-          <div className="card-new" onClick={() => setShowModal(true)}>
-            <div className="card-new-circle">+</div>
-            <span className="card-new-text">新建项目</span>
-          </div>
-
-          {/* Project Cards */}
+          <div className="card-new" onClick={() => setShowModal(true)}><div className="card-new-circle">+</div><span className="card-new-text">新建项目</span></div>
           {dramas.map(drama => (
-            <div
-              key={drama.script_id}
-              className="project-card"
-              onClick={() => navigate(`/project/${drama.script_id}`)}
-            >
-              <div className="card-cover">
-                {drama.cover_url ? (
-                  <img src={drama.cover_url} alt={drama.title} />
-                ) : (
-                  <div className="card-cover-placeholder">
-                    <span>🎬</span>
-                  </div>
-                )}
-              </div>
-              <div className="card-info">
-                <div className="card-meta">
-                  <span className="card-date">{formatDate(drama.updated_at)}</span>
-                  <button className="card-menu" onClick={e => e.stopPropagation()}>···</button>
-                </div>
-                <div className="card-title">{drama.title}</div>
-              </div>
+            <div key={drama.script_id} className="project-card" onClick={() => navigate(`/project/${drama.script_id}`)}>
+              <div className="card-cover">{drama.cover_url ? <img src={drama.cover_url} alt={drama.title} /> : <div className="card-cover-placeholder"><span>🎬</span></div>}</div>
+              <div className="card-info"><div className="card-meta"><span className="card-date">{formatDate(drama.updated_at)}</span><button className="card-menu" onClick={e => e.stopPropagation()}>···</button></div><div className="card-title">{drama.title}</div></div>
             </div>
           ))}
         </div>
       )}
-
-      {showModal && (
-        <NewProjectModal onClose={() => setShowModal(false)} onCreated={handleCreated} />
-      )}
+      {showModal && <NewProjectModal onClose={() => setShowModal(false)} onCreated={handleCreated} />}
     </div>
   );
 }
 
-// Agent Workspace Wrapper
 function AgentWorkspaceWrapper() {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const handleProjectCreated = (newId) => {
-    navigate(`/project/${newId}`, { replace: true });
-  };
-
-  return (
-    <AgentWorkspace
-      scriptId={id}
-      onBack={() => navigate('/projects')}
-      onProjectCreated={handleProjectCreated}
-    />
-  );
+  const handleProjectCreated = (newId) => navigate(`/project/${newId}`, { replace: true });
+  return <PremiumAgentWorkspace scriptId={id} onBack={() => navigate('/projects')} onProjectCreated={handleProjectCreated} />;
 }
 
-// System Settings
 function SystemSettings() {
   const [systemInfo, setSystemInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -304,58 +221,28 @@ function SystemSettings() {
           name: 'AI 短剧自动生成系统',
           version: '1.0.0',
           capabilities: [
-            { id: 'agent_brain', name: '导演大脑 / 调度', model: '本地模型 qwen/qwen3-32b', status: 'ready', icon: '🧠' },
-            { id: 'script_generation', name: '剧本生成', model: '本地模型 qwen/qwen3-32b', status: 'ready', icon: '📝' },
-            { id: 'character_image', name: '角色图生成', model: 'Kling 可灵 (kling-v3-omni)', status: 'ready', icon: '🎨' },
-            { id: 'video_generation', name: '分镜视频生成', model: 'Kling 可灵', status: 'ready', icon: '🎬' },
-            { id: 'tts_audio', name: '配音生成 (TTS)', model: 'MiniMax TTS (暂未启用)', status: 'pending', icon: '🎙️' },
-            { id: 'video_merge', name: '最终合成', model: 'FFmpeg (本地)', status: 'ready', icon: '🎞️' },
+            { id: 'script_generation', name: '编剧agent', model: 'deepseek-v4-pro', status: 'ready', icon: '📝' },
+            { id: 'script_review', name: '剧本审阅与复核agent', model: 'deepseek-v4-pro', status: 'ready', icon: '✅' },
+            { id: 'subject_analysis', name: '主体分析设计agent', model: 'deepseek-v4-pro', status: 'ready', icon: '🧩' },
+            { id: 'subject_image', name: '主体生图agent', model: 'kling-v3-omni', status: 'ready', icon: '🎨' },
+            { id: 'shot_script', name: '分镜脚本编写agent', model: 'deepseek-v4-pro', status: 'ready', icon: '🎬' },
+            { id: 'shot_review', name: '分镜审阅agent', model: 'deepseek-v4-pro', status: 'ready', icon: '🔍' },
+            { id: 'storyboard_image', name: '分镜生图agent', model: 'kling-v3-omni', status: 'ready', icon: '🖼️' },
+            { id: 'video_generation', name: '分镜生视频agent', model: 'kling-v3-omni · sound=on', status: 'ready', icon: '🎞️' },
           ],
         });
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     };
     loadSystemInfo();
   }, []);
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'ready': return <span style={{ color: '#4caf50' }}>✅ 可用</span>;
-      case 'pending': return <span style={{ color: '#ff9800' }}>⚠️ 待配置</span>;
-      default: return <span>{status}</span>;
-    }
-  };
-
+  const getStatusBadge = (status) => status === 'ready' ? <span style={{ color: '#4caf50' }}>✅ 可用</span> : <span>{status}</span>;
   if (loading) return <div className="loading">加载中...</div>;
-
   return (
     <div className="settings-container">
       <h2>⚙️ 系统设置</h2>
-      <section className="section">
-        <h3>🤖 系统信息</h3>
-        <div className="info-card">
-          <p><strong>系统名称：</strong>{systemInfo?.name}</p>
-          <p><strong>版本：</strong>{systemInfo?.version}</p>
-        </div>
-      </section>
-      <section className="section">
-        <h3>🎯 系统能力</h3>
-        <div className="capabilities-list">
-          {systemInfo?.capabilities?.map(cap => (
-            <div key={cap.id} className="capability-card">
-              <div className="capability-header">
-                <span className="capability-icon">{cap.icon}</span>
-                <span className="capability-name">{cap.name}</span>
-                {getStatusBadge(cap.status)}
-              </div>
-              <div className="capability-model">
-                <strong>模型：</strong><code>{cap.model}</code>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <section className="section"><h3>🤖 系统信息</h3><div className="info-card"><p><strong>系统名称：</strong>{systemInfo?.name}</p><p><strong>版本：</strong>{systemInfo?.version}</p></div></section>
+      <section className="section"><h3>🎯 系统能力</h3><div className="capabilities-list">{systemInfo?.capabilities?.map(cap => <div key={cap.id} className="capability-card"><div className="capability-header"><span className="capability-icon">{cap.icon}</span><span className="capability-name">{cap.name}</span>{getStatusBadge(cap.status)}</div><div className="capability-model"><strong>模型：</strong><code>{cap.model}</code></div></div>)}</div></section>
     </div>
   );
 }
@@ -363,30 +250,10 @@ function SystemSettings() {
 function AppContent() {
   const location = useLocation();
   const isWorkspace = location.pathname.startsWith('/project/');
-
-  if (isWorkspace) {
-    return (
-      <Routes>
-        <Route path="/project/:id" element={<AgentWorkspaceWrapper />} />
-      </Routes>
-    );
-  }
-
-  return (
-    <MainLayout>
-      <Routes>
-        <Route path="/" element={<DramaList />} />
-        <Route path="/projects" element={<DramaList />} />
-        <Route path="/settings" element={<SystemSettings />} />
-      </Routes>
-    </MainLayout>
-  );
+  if (isWorkspace) return <Routes><Route path="/project/:id" element={<AgentWorkspaceWrapper />} /></Routes>;
+  return <MainLayout><Routes><Route path="/" element={<DramaList />} /><Route path="/projects" element={<DramaList />} /><Route path="/settings" element={<SystemSettings />} /></Routes></MainLayout>;
 }
 
 export default function App() {
-  return (
-    <Router>
-      <AppContent />
-    </Router>
-  );
+  return <Router><AppContent /></Router>;
 }
