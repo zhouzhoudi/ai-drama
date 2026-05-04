@@ -9,6 +9,10 @@
     KLING_API_BASE     默认 https://api.klingai.com
     KLING_VIDEO_MODEL  默认 kling-v3-omni
     KLING_VIDEO_MODE   默认 std（可选 pro）
+    KLING_VIDEO_SOUND  默认 on
+
+注意：当前系统没有独立 TTS 能力。所有对白、口型和声音都通过 Kling
+OmniVideo 的 sound=on 配置在“分镜生视频”阶段生成。
 """
 
 import os
@@ -30,6 +34,7 @@ class VideoGenerator:
         self.api_root = base
         self.video_model = os.environ.get("KLING_VIDEO_MODEL", "kling-v3-omni")
         self.video_mode = os.environ.get("KLING_VIDEO_MODE", "std")
+        self.video_sound = os.environ.get("KLING_VIDEO_SOUND", "on") or "on"
         self.data_dir = Path("/Users/zhoumi/ai-drama-system/data/scripts")
         self.storage = get_storage()
 
@@ -58,9 +63,9 @@ class VideoGenerator:
             print("[Kling Video] 缺少 KLING_AK/SK，跳过实际请求。")
             return ""
 
-        # 视频 prompt 一律用 _build_video_prompt 重新拼，把 shot_text、对白、视觉
-        # 描述全部融合，让 v3-omni（OmniVideo）能同时生成画面 + 同步口型 + 配音。
-        # visual_prompt_for_kling 单独使用会丢中文对白和场景标签信息。
+        # 当前系统没有独立 TTS，声音必须在 Kling OmniVideo 阶段一次性生成。
+        # _build_video_prompt 会把对白、说话角色、情绪写进 prompt；_create_omni_video_task
+        # 会显式带 sound=on。
         prompt = self._build_video_prompt(shot, characters)
         negative_prompt = shot.get("negative_prompt_for_kling", "blurry, low quality, deformed")
 
@@ -129,22 +134,24 @@ class VideoGenerator:
             "mode": self.video_mode,
             "aspect_ratio": aspect_ratio,
             "duration": str(duration),
+            # 关键：当前没有独立 TTS，必须让 Kling 在视频生成阶段直接出声音。
+            # 不再允许普通配置误关声音；只有显式设置 KLING_ALLOW_SOUND_OFF=true 且
+            # KLING_VIDEO_SOUND=off 时才会关闭。
+            "sound": "on",
         }
-        # 关键：OmniVideo 的音频默认通常是关闭的（sound=off / generate_audio=false）。
-        # 仅靠 prompt 指令可能会出现“有口型但无音轨”的结果，所以这里显式开启。
-        # 约定：KLING_VIDEO_SOUND=on/off，默认 on。
-        sound = (os.environ.get("KLING_VIDEO_SOUND", "on") or "on").strip().lower()
-        if sound in ("on", "off"):
-            payload["sound"] = sound
-        else:
-            payload["sound"] = "on"
+        allow_sound_off = os.environ.get("KLING_ALLOW_SOUND_OFF", "false").lower() == "true"
+        if allow_sound_off and str(self.video_sound).strip().lower() == "off":
+            payload["sound"] = "off"
         if negative_prompt:
             payload["negative_prompt"] = negative_prompt
         if image_url:
             payload["image_list"] = [{"image_url": image_url, "type": "first_frame"}]
 
         kind = "image2video" if image_url else "text2video"
-        print(f"[Kling Video] 创建 omni-video({kind}) model={self.video_model} mode={self.video_mode} prompt={prompt[:60]}...")
+        print(
+            f"[Kling Video] 创建 omni-video({kind}) model={self.video_model} "
+            f"mode={self.video_mode} sound={payload['sound']} prompt={prompt[:60]}..."
+        )
         return self._post_create_task(url, payload)
 
     def _post_create_task(self, url: str, payload: Dict[str, Any]) -> str:
@@ -230,11 +237,11 @@ class VideoGenerator:
         return "omni" in (self.video_model or "").lower()
 
     def _build_video_prompt(self, shot: Dict, characters: List[Dict]) -> str:
-        """构造可灵视频 prompt：把视觉描述 + 分镜剧本格式 + 对白 + 配音指令融合。
+        """构造可灵视频 prompt：把视觉描述 + 分镜剧本格式 + 对白 + 声音指令融合。
 
-        对 v3-omni（OmniVideo）来说，prompt 里出现 `角色名说："对白"` 时模型会
-        生成同步口型与配音；所以这里**必须把对白显式写进 prompt**，并加一句
-        "同步生成口型与配音"指令。
+        当前没有独立 TTS。对 v3-omni（OmniVideo）来说，prompt 里出现
+        `角色名说："对白"`，并且请求体带 `sound=on`，才是生成同步口型和声音
+        的主路径。
         """
         char_name_by_id: Dict[str, str] = {
             c.get("character_id"): self._safe_text(c.get("name")) or c.get("character_id")
@@ -244,13 +251,10 @@ class VideoGenerator:
 
         parts: List[str] = []
 
-        # 1) 英文视觉骨架（LLM 给的 visual_prompt_for_kling），保证摄影/光线/质感稳定。
         visual = self._safe_text(shot.get("visual_prompt_for_kling"))
         if visual:
             parts.append(visual)
 
-        # 2) 中文分镜剧本（含 [@场景] / [@角色] / 对白格式），让 v3-omni 知道
-        #    谁说话、在哪里、画面动作怎么演。优先用 shot_text，其次 content_description。
         shot_text = self._safe_text(shot.get("shot_text"))
         if shot_text:
             parts.append(shot_text)
@@ -262,7 +266,6 @@ class VideoGenerator:
                 head = ", ".join(p for p in [shot_type, camera] if p)
                 parts.append(f"{head}，{desc}" if head else desc)
 
-        # 3) 显式对白行——这是触发 v3-omni 生成同步口型/配音的关键。
         dialogue = shot.get("dialogue") or {}
         if isinstance(dialogue, dict):
             text = self._safe_text(dialogue.get("text")) or self._safe_text(dialogue.get("tts_text"))
@@ -276,11 +279,9 @@ class VideoGenerator:
                     line = f'对白："{text}"。'
                 if emotion:
                     line += f"语气：{emotion}。"
-                # 明确告诉 OmniVideo 必须生成同步说话画面 + 配音
-                line += "请让说话角色在画面中嘴型与对白同步，并生成自然的中文配音音轨。"
+                line += "请在视频内直接生成自然中文声音、同步口型和环境声，不依赖外部 TTS。"
                 parts.append(line)
 
-        # 4) 角色一致性提示（让模型继续保持参考图里的人物外观）
         char_ids = shot.get("character_ids") or []
         if char_ids:
             names = [
@@ -293,18 +294,14 @@ class VideoGenerator:
                     f"画面中的角色：{', '.join(names)}，需与参考图保持外貌一致（发型/穿着/五官）。"
                 )
 
-        # 5) 画质和电影感收尾
-        parts.append("写实电影质感，cinematic lighting，4K，自然运镜。")
+        parts.append("写实电影质感，cinematic lighting，4K，自然运镜，视频自带声音。")
 
         prompt = " ".join(p for p in parts if p)
-        # 去除多余空白
         prompt = " ".join(prompt.split())
-        # 可灵 prompt 长度上限保守裁到 2000 字符
         if len(prompt) > 2000:
             prompt = prompt[:2000]
         return prompt
 
-    # 保留旧名称做兼容（其他地方可能引用到）
     def _generate_prompt_from_shot(self, shot: Dict, characters: List[Dict]) -> str:
         return self._build_video_prompt(shot, characters)
 
