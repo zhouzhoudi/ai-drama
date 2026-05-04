@@ -3,6 +3,7 @@
 Model policy:
 - All language-model agents default to deepseek-v4-pro.
 - All Kling image/video generators default to kling-v3-omni.
+- The project has no standalone TTS provider; Kling OmniVideo must run with sound=on.
 
 Import compatibility hook:
 - Existing backend code imports `services.agent_router.AgentRouter`.
@@ -34,6 +35,9 @@ def _apply_default_model_policy() -> None:
     os.environ.setdefault("KLING_CHARACTER_IMAGE_MODEL", "kling-v3-omni")
     os.environ.setdefault("KLING_STORYBOARD_IMAGE_MODEL", "kling-v3-omni")
     os.environ.setdefault("KLING_VIDEO_MODEL", "kling-v3-omni")
+    # No standalone TTS is available. Video generation must ask Kling OmniVideo
+    # to synthesize dialogue / lip sync / sound directly.
+    os.environ.setdefault("KLING_VIDEO_SOUND", "on")
 
 
 _apply_default_model_policy()
