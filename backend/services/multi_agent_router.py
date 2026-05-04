@@ -8,7 +8,6 @@ actions instead of overloading everything into REWRITE_SCRIPT.
 
 from __future__ import annotations
 
-import asyncio
 import importlib.util
 import logging
 from pathlib import Path
@@ -281,6 +280,10 @@ class AgentRouter(LegacyAgentRouter):
             queue_status, detail = self._queue_pipeline_background_action(background_tasks, action, script_id, params)
             return script_id, {"status": queue_status, "script_id": script_id, "detail": detail}
 
+        if action in self.LEGACY_ACTIONS and action not in {"CREATE_SCRIPT", "REWRITE_SCRIPT", "CHAT", "QUERY_STATUS"}:
+            queue_status, detail = self._queue_pipeline_background_action(background_tasks, action, script_id, params)
+            return script_id, {"status": queue_status, "script_id": script_id, "detail": detail}
+
         if action == "QUERY_STATUS":
             return script_id, {"status": "completed", "script_id": script_id, "summary": self._summarize_script(script)}
 
@@ -417,6 +420,8 @@ class AgentRouter(LegacyAgentRouter):
             "REVIEW_SHOTS": "分镜审阅agent 正在复核分镜",
             "GENERATE_STORYBOARD_IMAGES": "分镜生图agent 正在加入生图队列",
             "GENERATE_STORYBOARD_VIDEOS": "分镜生视频agent 正在加入视频队列",
+            "GENERATE_AUDIO": "配音任务正在加入后台队列",
+            "MERGE_FINAL": "最终成片任务正在加入后台队列",
             "QUERY_STATUS": "正在查询项目状态",
         }.get(action, "正在处理")
 
@@ -430,6 +435,8 @@ class AgentRouter(LegacyAgentRouter):
             "REVIEW_SHOTS": "会检查镜头连续性、角色一致性和提示词可执行性。",
             "GENERATE_STORYBOARD_IMAGES": "会调用 Kling 生成每个镜头的分镜图/首帧图。",
             "GENERATE_STORYBOARD_VIDEOS": "会调用 Kling OmniVideo 生成镜头视频片段。",
+            "GENERATE_AUDIO": "会复用旧配音后台任务。",
+            "MERGE_FINAL": "会复用旧最终合成后台任务。",
         }.get(action, "正在执行当前流程。")
 
     def _done_label(self, action: str, result: Dict[str, Any]) -> str:
@@ -454,4 +461,6 @@ class AgentRouter(LegacyAgentRouter):
             "REVIEW_SHOTS": "下一步可以输入：生成分镜图。",
             "GENERATE_STORYBOARD_IMAGES": "下一步可以输入：生成分镜视频。",
             "GENERATE_STORYBOARD_VIDEOS": "下一步可以输入：合成最终成片。",
+            "GENERATE_AUDIO": "下一步可以输入：生成分镜视频，或合成最终成片。",
+            "MERGE_FINAL": "最终合成已进入队列，可以查看任务状态。",
         }.get(action, "可以继续告诉我下一步要做什么。")
