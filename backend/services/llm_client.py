@@ -6,9 +6,13 @@ its model configuration through backend/.env:
 
   LLM_API_BASE=https://api.deepseek.com/v1
   LLM_API_KEY=...
-  LLM_MODEL=deepseek-chat
+  LLM_MODEL=deepseek-v4-pro
 
-Any OpenAI-compatible chat completion provider can be used.
+Project model policy:
+  - All language-model agents use deepseek-v4-pro by default.
+
+Any OpenAI-compatible chat completion provider can be used if you explicitly
+override LLM_API_BASE / LLM_MODEL.
 """
 
 from __future__ import annotations
@@ -24,7 +28,7 @@ import httpx
 
 
 DEFAULT_LLM_API_BASE = "https://api.deepseek.com/v1"
-DEFAULT_LLM_MODEL = "deepseek-chat"
+DEFAULT_LLM_MODEL = "deepseek-v4-pro"
 
 
 def _read_env_file_value(key: str) -> str:
